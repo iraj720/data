@@ -1,0 +1,78 @@
+version: "3.5"
+
+services: 
+  es:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.8.2
+    expose:
+      - 9200
+      - 9300
+    networks:
+      - backnet
+    environment:
+    - xpack.security.enabled=false
+    - discovery.type=single-node
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - backnet
+    ports:
+      - 22181:2181
+
+  
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - zookeeper
+    expose:
+      - 29092
+    networks:
+      - backnet
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+
+  flask:
+    image: myflask
+    ports:
+      - 7000:7000
+    depends_on:
+      - kafka
+      - es
+    build:
+      context: app
+      dockerfile: ./Dockerfile
+
+
+  kafka-producer:
+    depends_on:
+      - kafka
+    image: myproducer
+    build:
+      context: kafka-producer
+      dockerfile: ./Dockerfile
+    networks:
+      - backnet
+
+  kafka-client:
+    depends_on:
+      - kafka
+      - es
+    restart: always
+    image: myclient
+    build:
+      context: kafka-client
+      dockerfile: ./Dockerfile
+    networks:
+      - backnet
+    
+networks:
+  backnet:
+    driver: bridge
