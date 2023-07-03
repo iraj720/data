@@ -17,7 +17,7 @@ class Producer(threading.Thread):
         self.stop_event.set()
 
     def run(self):
-        producer = KafkaProducer(bootstrap_servers='backnet:29092')
+        producer = KafkaProducer(bootstrap_servers='localhost:29092')
 
         df = (
             pd.read_csv("wiki_movie_plots_deduped.csv")
@@ -48,7 +48,7 @@ class Producer(threading.Thread):
 
 def run():
     try:
-        admin = KafkaAdminClient(bootstrap_servers='backnet:29092')
+        admin = KafkaAdminClient(bootstrap_servers='localhost:29092')
         topic = NewTopic(name='test',
                     num_partitions=1,
                     replication_factor=1) 
